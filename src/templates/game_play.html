@@ -115,6 +115,16 @@
 
 {% block head_scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Use script-friendly template variables -->
+<script>
+    // Game configuration from server
+    const gameConfig = {
+        mode: "{{ mode }}",
+        isAgentMode: "{{ mode }}" === "agent",
+        modelPath: "{{ model_path|default('') }}",
+        initialMessage: "{{ mode }}" === "human" ? "Press SPACE or click Start to begin." : "Game will start automatically..."
+    };
+</script>
 {% endblock %}
 
 {% block footer_scripts %}
@@ -126,6 +136,7 @@ let highScore = 0;
 let gamesPlayed = 0;
 let scores = [];
 let currentGameCounted = false;  // Flag to track if current game has been counted
+let performanceChart = null;
 
 // Function to log to console
 function logToConsole(message) {
@@ -149,16 +160,16 @@ function safeUpdateElement(id, updateFn) {
 
 // Initialize when the document is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    {% if mode == 'agent' %}
-    // Initialize the chart for agent mode
-    initChart();
-    
-    // Auto-start the game for agent mode after a short delay
-    setTimeout(() => {
-        sendCommand('space');
-        logToConsole('Agent mode: automatically starting game');
-    }, 2000);
-    {% endif %}
+    // Initialize chart if in agent mode
+    if (gameConfig.isAgentMode) {
+        initChart();
+        
+        // Auto-start the game for agent mode after a short delay
+        setTimeout(() => {
+            sendCommand('space');
+            logToConsole('Agent mode: automatically starting game');
+        }, 2000);
+    }
     
     // Add event listeners to buttons
     setupEventListeners();
@@ -167,13 +178,10 @@ document.addEventListener('DOMContentLoaded', function() {
     startUpdates();
     
     // Initial log
-    logToConsole('Game initialized. {% if mode == "human" %}Press SPACE or click Start to begin.{% else %}Game will start automatically...{% endif %}');
+    logToConsole(`Game initialized. ${gameConfig.initialMessage}`);
 });
 
-{% if mode == 'agent' %}
 // Performance chart for agent mode
-let performanceChart;
-
 function initChart() {
     const ctx = document.getElementById('performanceChart').getContext('2d');
     performanceChart = new Chart(ctx, {
@@ -211,11 +219,12 @@ function initChart() {
 
 // Update the chart with new game data
 function updateChart(score) {
-    performanceChart.data.labels.push(gamesPlayed);
-    performanceChart.data.datasets[0].data.push(score);
-    performanceChart.update();
+    if (performanceChart) {
+        performanceChart.data.labels.push(gamesPlayed);
+        performanceChart.data.datasets[0].data.push(score);
+        performanceChart.update();
+    }
 }
-{% endif %}
 
 // Set up event listeners for buttons and keyboard
 function setupEventListeners() {
@@ -361,15 +370,15 @@ function updateGameState() {
                             }
                             safeUpdateElement('gamesPlayed', el => el.textContent = gamesPlayed);
                             
-                            {% if mode == 'agent' %}
-                            // Update chart for agent mode
-                            scores.push(data.score);
-                            updateChart(data.score);
-                            
-                            // Update average score
-                            const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
-                            safeUpdateElement('avgScore', el => el.textContent = avgScore.toFixed(2));
-                            {% endif %}
+                            // In agent mode, update chart and average score
+                            if (gameConfig.isAgentMode) {
+                                scores.push(data.score);
+                                updateChart(data.score);
+                                
+                                // Update average score
+                                const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+                                safeUpdateElement('avgScore', el => el.textContent = avgScore.toFixed(2));
+                            }
                             
                             logToConsole(`Game over! Final score: ${data.score}. Games played: ${gamesPlayed}`);
                         }
@@ -391,9 +400,8 @@ function updateGameState() {
                 safeUpdateElement('gameStatus', el => el.textContent = data.status_text);
             }
             
-            {% if mode == 'agent' %}
-            // Update last action for agent mode safely
-            if (data.last_action !== undefined) {
+            // In agent mode, update action
+            if (gameConfig.isAgentMode && data.last_action !== undefined) {
                 safeUpdateElement('lastAction', el => {
                     const actions = ['Up', 'Right', 'Down', 'Left'];
                     el.textContent = data.last_action >= 0 && data.last_action < actions.length 
@@ -401,7 +409,6 @@ function updateGameState() {
                         : 'Unknown';
                 });
             }
-            {% endif %}
         })
         .catch(error => {
             console.error('Error updating game state:', error);

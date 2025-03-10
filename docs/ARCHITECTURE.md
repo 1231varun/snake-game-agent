@@ -15,6 +15,7 @@ snake-game-agent/
 │   ├── run-docker-web.sh            # Run game in web mode
 │   ├── run-docker-train.sh          # Train the agent
 │   ├── run-docker-fast-train.sh     # Fast training for Apple Silicon
+│   ├── run-docker-visual-train.sh   # Training with visual dashboard
 │   └── run-docker-windows.ps1       # Windows support script
 ├── config/                  # Configuration files
 │   ├── Dockerfile                   # Docker image definition
@@ -32,7 +33,12 @@ snake-game-agent/
 │   │   ├── dqn_agent.py     # Deep Q-Network agent
 │   │   └── trainer.py       # Training functionality
 │   ├── main_web.py          # Web interface entry point
-│   └── main_train.py        # Agent training entry point
+│   ├── main_train.py        # Agent training entry point
+│   ├── main_visual_train.py # Visual training dashboard
+│   ├── static/              # Static assets for web interface
+│   │   ├── css/             # Stylesheets
+│   │   └── js/              # JavaScript files
+│   └── templates/           # HTML templates
 ├── models/                  # Saved model weights
 └── data/                    # Training data and logs
 ```
@@ -54,12 +60,24 @@ The web interface is implemented in `src/game/webserver.py` and `src/main_web.py
 - Watching the agent play
 - Controlling the snake with keyboard input
 
+### Visual Training Dashboard
+
+The visual training dashboard is implemented in `src/main_visual_train.py` and related frontend files. It provides:
+- Real-time visualization of the training process
+- Interactive controls for pausing/resuming training
+- Speed adjustment for visualization
+- Training metrics and charts
+- Console logging system for training events
+- Connection status monitoring
+- Robust error handling for UI elements
+
 ### Reinforcement Learning Agent
 
 The reinforcement learning agent is implemented in `src/agent/dqn_agent.py` and uses:
 - Deep Q-Network (DQN) architecture
 - Experience replay
 - ε-greedy exploration policy
+- Incremental learning from saved models
 
 ### Training Infrastructure
 
@@ -68,6 +86,16 @@ The training infrastructure is in `src/agent/trainer.py` and `src/main_train.py`
 - Agent training loop
 - Model saving/loading
 - Performance metrics
+- Incremental training capability
+
+### Console Logging System
+
+The console logging system includes:
+- Server-side log message queue
+- Client-side display and rendering
+- Event-based logging (food collection, collisions, etc.)
+- Automatic log rotation to prevent memory issues
+- Status indicators for connection state
 
 ## Command Interfaces
 
@@ -88,6 +116,7 @@ For advanced options and more control, the executable scripts in `bin/` can be c
 - `bin/run-docker-web.sh`: Run the web interface with custom options
 - `bin/run-docker-train.sh`: Train with custom parameters
 - `bin/run-docker-fast-train.sh`: Use optimized training
+- `bin/run-docker-visual-train.sh`: Train with visual dashboard
 
 ## Cross-Platform Support
 

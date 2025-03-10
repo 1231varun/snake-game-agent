@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Run lint-staged for JS/CSS/HTML files
+npx lint-staged
+
+# Find Python executable - try several options
+PYTHON_EXEC=""
+if [ -f "venv/bin/python" ]; then
+  PYTHON_EXEC="venv/bin/python"
+elif [ -f ".venv/bin/python" ]; then
+  PYTHON_EXEC=".venv/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+  PYTHON_EXEC="python3"
+elif command -v python >/dev/null 2>&1; then
+  PYTHON_EXEC="python"
+else
+  echo "Warning: Python not found. Skipping Python linting."
+  exit 0
+fi
+
+# Run Python linting on staged Python files
+STAGED_PYTHON_FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.py$')
+if [ -n "$STAGED_PYTHON_FILES" ] && [ -n "$PYTHON_EXEC" ]; then
+  echo "Running Python linting on staged files using $PYTHON_EXEC..."
+  $PYTHON_EXEC -m black $STAGED_PYTHON_FILES || true
+  $PYTHON_EXEC -m isort $STAGED_PYTHON_FILES || true
+  # Add the formatted files back to the staging area
+  git add $STAGED_PYTHON_FILES
+fi 

@@ -17,7 +17,13 @@ build/
 # Unit test / coverage reports
 htmlcov/
 .coverage
+.coverage.*
 .pytest_cache/
+coverage/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
 
 # Environments
 .env
@@ -25,12 +31,16 @@ htmlcov/
 env/
 venv/
 ENV/
+.python-version
 
 # IDE specific files
 .idea/
 .vscode/
 *.swp
 *.swo
+.vim/
+*.sublime-*
+.atom/
 
 # Jupyter Notebooks
 notebooks/
@@ -40,9 +50,112 @@ notebooks/
 models/
 data/
 logs/
+checkpoints/
+saved_models/
+tb_logs/
+*.h5
+*.keras
+*.pb
+*.ckpt
+*.pth
+*.onnx
+*.mlmodel
+*.joblib
+*.pkl
+*.pickle
 
 # Local configurations
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.local
+
+# JavaScript/Node.js
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+yarn.lock
+.pnp/
+.pnp.js
+
+# Build directories for frontend
+/build/
+/dist/
+/.next/
+/.nuxt/
+/.out/
+/.storybook-out
+/.vercel
+
+# Cache and temporary files
+.cache/
+.temp/
+.tmp/
+tmp/
+temp/
+*.tmp
+*.temp
+*.log
+
+# Docker
+.docker/
+docker-compose.override.yml
 
 # macOS specific
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# Linux specific
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Linting and formatting cache
+.eslintcache
+.stylelintcache
+.prettiercache
+.mypy_cache/
+
+# Virtual environment artifacts
+pip-wheel-metadata/
+pip-log.txt
+pyvenv.cfg
+
+# Testing artifacts
+.benchmarks/
+.hypothesis/
+
+# Profiling
+.prof/
+*.prof
+
+# Keep important config files
+!.pylintrc
+!.flake8
+!.isort.cfg
+!.eslintrc.js
+!.stylelintrc.json
+!.htmlhintrc
+!pyproject.toml
+!.husky/
+!.gitignore
+!.gitattributes
+!.github/

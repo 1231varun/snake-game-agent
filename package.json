@@ -1,0 +1,38 @@
+{
+  "name": "snake-game-agent",
+  "version": "1.0.0",
+  "description": "Snake Game Agent with Reinforcement Learning",
+  "scripts": {
+    "lint:js": "eslint src/static/js/**/*.js",
+    "lint:js:fix": "eslint --fix src/static/js/**/*.js",
+    "lint:css": "stylelint src/static/css/**/*.css",
+    "lint:css:fix": "stylelint --fix src/static/css/**/*.css",
+    "lint:html": "htmlhint src/templates/**/*.html",
+    "lint:all": "npm run lint:js && npm run lint:css && npm run lint:html",
+    "lint:fix": "npm run lint:js:fix && npm run lint:css:fix",
+    "prepare": "husky install"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-n": "^16.6.1",
+    "eslint-plugin-promise": "^6.1.1",
+    "htmlhint": "^1.1.4",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0",
+    "stylelint": "^16.2.1",
+    "stylelint-config-standard": "^36.0.0"
+  },
+  "lint-staged": {
+    "src/static/js/**/*.js": [
+      "eslint --fix"
+    ],
+    "src/static/css/**/*.css": [
+      "stylelint --fix"
+    ],
+    "src/templates/**/*.html": [
+      "htmlhint"
+    ]
+  }
+} 

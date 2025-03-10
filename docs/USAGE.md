@@ -38,6 +38,15 @@ make train
 make fast-train
 ```
 
+### Visual Training with Real-time Feedback
+
+```bash
+# Using the visual training script directly
+./bin/run-docker-visual-train.sh
+```
+
+Then open your browser to http://localhost:3000 to access the training dashboard.
+
 ### Cleaning Up
 
 ```bash
@@ -86,6 +95,60 @@ For more control and custom options, you can call the scripts directly:
 ./bin/run-docker-fast-train.sh --episodes=100 --batch-size=32 --max-steps=500
 ```
 
+### Visual Training
+
+```bash
+./bin/run-docker-visual-train.sh --episodes=50 --model=models/visual_model.h5
+```
+
+This script starts the training process with a real-time web-based dashboard.
+
+## Visual Training Dashboard Features
+
+The visual training dashboard provides an interactive interface to monitor and control the training process:
+
+### Main Features
+
+- **Game Visualization**: Watch the snake learn in real-time
+- **Training Statistics**: Monitor metrics like score, episodes, and epsilon
+- **Interactive Controls**:
+  - Pause/Resume training
+  - Adjust training speed (faster/slower)
+  - Clear the console log
+- **Real-time Charts**: Track scores and epsilon over episodes
+- **Console Logging**: Detailed feedback on training events including:
+  - Episode start/end notifications
+  - Food collection events
+  - Collision and timeout reports
+  - Model saving checkpoints
+- **Connection Status**: Clearly see if the dashboard is connected to the training process
+- **Progress Bar**: Visual indication of training completion percentage
+
+### Dashboard Sections
+
+- **Control Panel**: Contains buttons to control the training process and status indicators
+- **Game View**: Shows the current state of the snake game
+- **Console**: Displays detailed logs about the training process
+- **Training Progress**: Shows statistics and a progress bar
+- **Training Metrics Chart**: Visual representation of scores and epsilon values
+
+## Incremental Training
+
+All training scripts support continuing from a previously saved model:
+
+```bash
+# Continue from the default model path
+./bin/run-docker-fast-train.sh --continue
+
+# Continue from a specific model
+./bin/run-docker-visual-train.sh --continue --model=models/my_custom_model.h5
+
+# Start fresh, ignoring any existing model
+./bin/run-docker-train.sh --fresh
+```
+
+By default, training will continue from an existing model if one exists at the specified path.
+
 ## Utility Scripts
 
 ### Killing Game Processes
@@ -119,6 +182,20 @@ If you need to kill all processes related to the Snake Game:
 --save-freq=number   # Frequency to save checkpoints
 --batch-size=number  # Batch size for neural network training
 --max-steps=number   # Maximum steps per episode
+--continue           # Continue training from existing model (default)
+--fresh              # Start with a fresh model
+```
+
+### Visual Training
+
+```
+--episodes=number    # Number of episodes to train (default: 50)
+--model=path         # Path to save/load the model (default: models/visual_model.h5)
+--port=number        # Web server port (default: 3000)
+--timeout=number     # Timeout multiplier (default: 40)
+--save-freq=number   # Checkpoint saving frequency (default: 5)
+--continue           # Continue training from existing model (default)
+--fresh              # Start with a fresh model
 ```
 
 ## Troubleshooting
@@ -151,6 +228,13 @@ If needed, you can manually specify a different port:
 # On Windows
 ./bin/run-docker-windows.ps1 python src/main_web.py --port=8080
 ```
+
+### Common UI Issues
+
+If you see "Cannot set properties of null" errors in the console:
+- The application has built-in error handling to prevent these issues
+- The interface will automatically try to reconnect if the connection is lost
+- Status indicators will show the current connection state
 
 ### Windows X Server Issues
 

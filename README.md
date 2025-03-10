@@ -13,8 +13,11 @@ This project implements a classic Snake game using Pygame and develops an AI age
 - **Reinforcement Learning Agent**: Train an AI to learn the game
 - **Visual Training**: Browser-based visualization of the training process in real-time
 - **Incremental Learning**: Resume training from previously saved models
+- **Enhanced Console Logging**: Real-time feedback on training progress and events
+- **Robust UI**: Error-resistant interface with clear status indicators
 - **Visualization Tools**: Training metrics and performance graphs
 - **Docker Support**: Cross-platform play and training (Linux, macOS, and Windows) 
+- **Code Quality Tools**: Integrated linting and formatting for Python, JavaScript, HTML, and CSS
 
 ## Quick Start
 
@@ -34,6 +37,14 @@ Then open your browser to http://localhost:3000 and use the arrow keys to contro
 make train       # Standard training
 make fast-train  # Optimized for Apple Silicon
 ```
+
+### Visual Training with Real-time Feedback
+
+```bash
+./bin/run-docker-visual-train.sh
+```
+
+This opens a real-time dashboard in your browser showing training progress, game state, console logs, and performance metrics.
 
 ### Watching the Agent Play
 
@@ -138,6 +149,7 @@ The agent uses a Deep Q-Network (DQN) with the following characteristics:
 - **State Space**: Simplified representation of the game state
 - **Action Space**: 3 possible actions (straight, right, left)
 - **Reward System**: Rewards for eating food, penalties for collisions
+- **Incremental Learning**: Continue training from previously saved models
 
 For more details, see [Architecture](docs/ARCHITECTURE.md).
 
@@ -217,7 +229,10 @@ The visual training script provides a real-time browser interface that allows yo
 - View training metrics and charts
 - Pause/resume training
 - Adjust visualization speed
-- Monitor connection status and training logs
+- Monitor connection status with clear indicators
+- Read detailed console logs about training events (food collected, game overs, etc.)
+- Track statistics like average score, epsilon value, and timeouts
+- Auto-scrolling console that respects user interaction
 
 Access the visualization by opening http://localhost:3000 in your browser while the training is running.
 
@@ -236,6 +251,7 @@ This will start the web server on port 3000. Open your browser to `http://localh
 - **Port conflicts**: The scripts automatically detect and clear ports in use
 - **Docker issues**: Make sure Docker is running before executing the scripts
 - **Training timeouts**: If all episodes timeout, try increasing the `--timeout` parameter
+- **UI errors**: The interface is designed to gracefully handle connection issues and DOM element errors
 
 ## License
 
@@ -248,3 +264,166 @@ See the [LICENSE](LICENSE) file for details.
 3. Commit your changes (`git commit -m 'Add some amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+## Code Quality Tools
+
+The project includes several linting and formatting tools to maintain code quality:
+
+### Python Linting and Formatting
+
+We use the following Python tools:
+- **Black**: Code formatter
+- **Flake8**: PEP8 style guide enforcer
+- **Pylint**: Static code analyzer
+- **isort**: Import sorting
+
+Run Python linting:
+```bash
+# Run all Python linting tools
+make lint-python
+
+# Format Python code with Black
+make format
+
+# Sort Python imports with isort
+make isort
+
+# Run Flake8 linter
+make flake8
+
+# Run Pylint static analyzer
+make pylint
+```
+
+### JavaScript, HTML, and CSS Linting
+
+We use the following frontend tools:
+- **ESLint**: JavaScript linter (using StandardJS rules)
+- **Stylelint**: CSS linter
+- **HTMLHint**: HTML validator
+
+Run frontend linting:
+```bash
+# Run all frontend linting tools
+make lint-frontend
+
+# Run ESLint for JavaScript
+make eslint
+
+# Run Stylelint for CSS
+make stylelint
+
+# Run HTMLHint for HTML
+make htmlhint
+```
+
+To automatically fix issues where possible:
+```bash
+# Fix all frontend issues
+make lint-frontend-fix
+
+# Fix only JavaScript issues
+make eslint-fix
+
+# Fix only CSS issues
+make stylelint-fix
+```
+
+### Run All Linting Checks
+
+To run all linting tools at once:
+```bash
+make lint
+```
+
+With auto-fix for all fixable issues:
+```bash
+make lint-fix
+```
+
+### Setting Up Development Environment
+
+The easiest way to set up your development environment is to use the `make venv` command:
+
+```bash
+make venv
+```
+
+This will:
+1. Create a Python virtual environment in the `venv` directory
+2. Install all Python dependencies from `requirements.txt`
+3. Install all Node.js dependencies for frontend tools
+4. Set up pre-commit hooks with Husky
+
+After running `make venv`, you'll need to activate the virtual environment:
+
+**On Unix/macOS**:
+```bash
+source venv/bin/activate
+# Or use our helper script
+source bin/activate_venv.sh
+```
+
+**On Windows**:
+```powershell
+.\venv\Scripts\activate
+# Or use our helper script
+.\bin\Activate-Venv.ps1
+```
+
+To deactivate the virtual environment, simply run:
+```bash
+deactivate
+```
+
+### Verifying Your Development Environment
+
+To check if your development environment is correctly set up, run:
+
+```bash
+./bin/check-dev-setup.sh
+```
+
+This script will verify:
+- Python virtual environment activation
+- Required Python packages installation
+- Node.js and npm installation
+- Frontend dependency installation
+- Git hooks setup
+
+### Manual Setup
+
+If you prefer to set up your environment manually:
+
+1. Install Python dependencies:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: .\venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+2. Install Node.js dependencies:
+```bash
+npm install
+```
+
+3. Set up pre-commit hooks:
+```bash
+npx husky install
+```
+
+### Pre-commit Hooks
+
+The project uses pre-commit hooks to ensure code quality before commits:
+
+1. JavaScript, CSS, and HTML files are automatically linted and fixed (where possible) using lint-staged and Husky.
+2. Python files are automatically formatted using Black and isort.
+
+These hooks are automatically set up when you run `make venv` or you can set them up manually:
+
+```bash
+npm install
+npx husky install
+```
+
+This will ensure that all code is properly formatted before being committed to the repository.
