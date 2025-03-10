@@ -2,11 +2,13 @@ version: '3.8'
 
 services:
   snake-game:
-    build: .
+    build:
+      context: ..
+      dockerfile: config/Dockerfile
     volumes:
-      - ./:/app
-      - ./models:/app/models
-      - ./data:/app/data
+      - ../:/app
+      - ../models:/app/models
+      - ../data:/app/data
     environment:
       - DISPLAY=${DISPLAY:-:1}
     # Override CMD for different modes

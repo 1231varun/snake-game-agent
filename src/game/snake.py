@@ -25,13 +25,14 @@ class SnakeGame:
     and agent training through reinforcement learning.
     """
     
-    def __init__(self, width=800, height=600, grid_size=20):
+    def __init__(self, width=800, height=600, grid_size=20, max_steps_without_food=100):
         """Initialize the snake game."""
         self.width = width
         self.height = height
         self.grid_size = grid_size
         self.grid_width = width // grid_size
         self.grid_height = height // grid_size
+        self.max_steps_without_food = max_steps_without_food
         
         # Initialize pygame if not already initialized
         if not pygame.get_init():
@@ -57,6 +58,9 @@ class SnakeGame:
         # Initial score
         self.score = 0
         
+        # Track all empty cells for efficient food placement
+        self.update_empty_cells()
+        
         # Generate first food
         self.generate_food()
         
@@ -71,19 +75,43 @@ class SnakeGame:
         
         # Return the initial state (useful for RL)
         return self.get_state()
+
+    def update_empty_cells(self):
+        """Update the list of empty cells for efficient food placement."""
+        self.empty_cells = set()
+        for x in range(self.grid_width):
+            for y in range(self.grid_height):
+                position = (x, y)
+                if position not in self.snake:
+                    self.empty_cells.add(position)
     
     def generate_food(self):
         """Generate food at a random empty location."""
-        # Find all empty cells
-        empty_cells = []
-        for x in range(self.grid_width):
-            for y in range(self.grid_height):
-                if (x, y) not in self.snake:
-                    empty_cells.append((x, y))
-        
         # Place food in a random empty cell
-        if empty_cells:
-            self.food = random.choice(empty_cells)
+        if self.empty_cells:
+            # If snake is small (length 1-3), place food closer to the snake head
+            # to make initial learning easier
+            if len(self.snake) <= 3:
+                head_x, head_y = self.snake[0]
+                close_cells = []
+                
+                # Get empty cells within a limited range of the snake head
+                range_limit = 5 + len(self.snake) * 2  # Increase range as snake grows
+                for cell in self.empty_cells:
+                    x, y = cell
+                    distance = abs(x - head_x) + abs(y - head_y)
+                    if distance <= range_limit:
+                        close_cells.append(cell)
+                
+                # If we found close cells, choose from them
+                if close_cells:
+                    self.food = random.choice(close_cells)
+                    self.empty_cells.remove(self.food)
+                    return
+            
+            # Default case: choose from all empty cells
+            self.food = random.choice(tuple(self.empty_cells))
+            self.empty_cells.remove(self.food)
         else:
             # No empty cells, game won!
             self.food = None
@@ -226,6 +254,10 @@ class SnakeGame:
             self.game_over = True
             return self.get_state(), -1, True, {'score': self.score}
         
+        # Update empty cells - remove the new head position
+        if new_head in self.empty_cells:
+            self.empty_cells.remove(new_head)
+        
         # Add new head
         self.snake.insert(0, new_head)
         
@@ -236,14 +268,18 @@ class SnakeGame:
             self.score += 1
             reward = 1
             
+            # Update empty cells (don't add back the tail)
+            self.update_empty_cells()
+            
             # Generate new food
             self.generate_food()
             
             # Reset steps since food
             self.steps_since_food = 0
         else:
-            # Remove tail
-            self.snake.pop()
+            # Remove tail and add it back to empty cells
+            tail = self.snake.pop()
+            self.empty_cells.add(tail)
             
             # Small negative reward for each step without food
             reward = -0.01
@@ -251,10 +287,27 @@ class SnakeGame:
             # Increase steps since food
             self.steps_since_food += 1
             
-            # Check if snake is stuck in a loop
-            if self.steps_since_food > 100 * len(self.snake):
+            # Check if snake is stuck in a loop - more aggressive timeout
+            # Use snake length as a factor, but with a lower multiplier
+            if self.steps_since_food > self.max_steps_without_food * len(self.snake):
                 self.game_over = True
                 reward = -1
+                return self.get_state(), reward, self.game_over, {'score': self.score, 'timeout': True}
+                
+            # Add distance-based rewards to guide the snake toward food
+            head_x, head_y = self.snake[0]
+            food_x, food_y = self.food
+            
+            # Calculate Manhattan distance to food
+            old_distance = abs(head_x - food_x) + abs(head_y - food_y)
+            prev_x, prev_y = head_x, head_y
+            
+            # Check if we got closer to the food
+            if old_distance > 0:
+                # Small positive reward for getting closer to food
+                # Small negative reward for getting farther from food
+                distance_reward = 0.1 / old_distance
+                reward += distance_reward
         
         # Increment total steps
         self.total_steps += 1

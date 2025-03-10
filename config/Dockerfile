@@ -21,11 +21,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install dependencies
-COPY requirements.txt .
+COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project code
-COPY . .
+# We don't need to copy all files since we'll mount them as volumes
+# COPY . .
 
 # Set display environment variable
 ENV DISPLAY=:1

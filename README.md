@@ -139,6 +139,62 @@ The agent uses a Deep Q-Network (DQN) with the following characteristics:
 
 For more details, see [Architecture](docs/ARCHITECTURE.md).
 
+## M3 Optimization Features
+
+This project includes special optimizations for Apple Silicon (M1/M2/M3) processors:
+
+1. **Metal Performance Optimizations**: Uses Metal-specific configurations to accelerate TensorFlow and PyTorch.
+
+2. **Mixed Precision Training**: Automatically enables mixed precision on Apple Silicon for faster training.
+
+3. **Fast Training Scripts**: Includes specialized scripts for both full training and rapid testing:
+   - `bin/run-docker-fast-train.sh`: Optimized training with balanced parameters
+   - `bin/run-docker-test-train.sh`: Super-fast testing for rapid development iterations
+
+4. **Intelligent Agent Design**:
+   - Targeted exploration strategy that biases toward food
+   - Adaptive learning rates optimized for Apple Silicon
+   - Smart food placement to improve initial learning
+   - Faster epsilon decay pattern for quicker learning
+
+## Usage
+
+### Training
+
+For full training on Apple Silicon:
+
+```bash
+./bin/run-docker-fast-train.sh
+```
+
+For quick testing of changes:
+
+```bash
+./bin/run-docker-test-train.sh
+```
+
+Both scripts accept the following parameters:
+- `--episodes=N`: Number of training episodes (default: 100 for fast-train, 5 for test-train)
+- `--model=path/to/model.h5`: Path to save the model
+- `--max-steps=N`: Maximum steps per episode
+- `--timeout=N`: Timeout multiplier (higher values give more time to find food)
+
+### Web Interface
+
+Run the web interface to play the game or watch the trained agent:
+
+```bash
+./bin/run-docker-web.sh
+```
+
+This will start the web server on port 3000. Open your browser to `http://localhost:3000` to access the game.
+
+## Troubleshooting
+
+- **Port conflicts**: The scripts automatically detect and clear ports in use
+- **Docker issues**: Make sure Docker is running before executing the scripts
+- **Training timeouts**: If all episodes timeout, try increasing the `--timeout` parameter
+
 ## License
 
 See the [LICENSE](LICENSE) file for details.

@@ -23,7 +23,8 @@ class SnakeTrainer:
         batch_size=64,
         target_update_freq=5,
         save_freq=100,
-        render_freq=0  # 0 means no rendering during training
+        render_freq=0,  # 0 means no rendering during training
+        timeout_multiplier=100  # Default timeout multiplier
     ):
         self.model_name = model_name
         self.log_dir = log_dir
@@ -33,13 +34,18 @@ class SnakeTrainer:
         self.target_update_freq = target_update_freq
         self.save_freq = save_freq
         self.render_freq = render_freq
+        self.timeout_multiplier = timeout_multiplier
         
         # Create directories
         os.makedirs(os.path.dirname(model_name), exist_ok=True)
         os.makedirs(log_dir, exist_ok=True)
         
+        # Training stats
+        self.start_time = time.time()
+        self.timeout_count = 0
+        
         # Initialize agent and environment
-        self.game = SnakeGame()
+        self.game = SnakeGame(max_steps_without_food=timeout_multiplier)
         self.agent = DQNAgent(
             state_size=11,
             action_size=3,
@@ -52,12 +58,21 @@ class SnakeTrainer:
         self.avg_scores = []
         self.epsilons = []
         self.losses = []
+        self.episode_durations = []  # Track episode times
     
     def train(self):
         """Train the agent."""
         print("Starting training...")
+        print(f"Timeout multiplier: {self.timeout_multiplier}")
         
-        for e in tqdm(range(self.episodes)):
+        progress_bar = tqdm(range(self.episodes), desc="Training")
+        
+        # Calculate how often to print progress - handling small episode counts
+        print_freq = max(1, self.episodes // 10) if self.episodes > 1 else 1
+        
+        for e in progress_bar:
+            episode_start = time.time()
+            
             # Reset environment and agent metrics
             state = self.game.reset()
             state = self.game.get_state_for_agent()
@@ -93,9 +108,14 @@ class SnakeTrainer:
                     time.sleep(0.01)  # Small delay for visualization
                 
                 if done:
+                    # Track timeout events
+                    if info.get('timeout', False):
+                        self.timeout_count += 1
                     break
             
             # Store metrics
+            episode_duration = time.time() - episode_start
+            self.episode_durations.append(episode_duration)
             self.scores.append(info["score"])
             avg_score = np.mean(self.scores[-100:])  # Moving average of last 100 episodes
             self.avg_scores.append(avg_score)
@@ -104,18 +124,39 @@ class SnakeTrainer:
             if episode_loss:
                 self.losses.append(np.mean(episode_loss))
             
-            # Print progress
-            template = "Episode: {:4d}/{:4d} | Score: {:3d} | Avg Score: {:5.2f} | Epsilon: {:.4f}"
-            print(template.format(e+1, self.episodes, info["score"], avg_score, self.agent.epsilon))
+            # Update progress bar with key metrics
+            progress_bar.set_postfix({
+                'score': info["score"], 
+                'avg': f"{avg_score:.2f}",
+                'eps': f"{self.agent.epsilon:.2f}",
+                'time': f"{episode_duration:.1f}s",
+                'timeouts': self.timeout_count
+            })
+            
+            # Print progress periodically
+            if (e+1) % print_freq == 0 or (e+1) == self.episodes:
+                template = "Episode: {:4d}/{:4d} | Score: {:3d} | Avg Score: {:5.2f} | Epsilon: {:.4f} | Timeouts: {:d}"
+                print(template.format(e+1, self.episodes, info["score"], avg_score, self.agent.epsilon, self.timeout_count))
             
             # Save the model periodically
             if self.save_freq > 0 and (e+1) % self.save_freq == 0:
                 model_path = f"{self.model_name.replace('.h5', '')}_{e+1}.h5"
                 self.agent.save(model_path)
-                print(f"Model saved to {model_path}")
+                print(f"Model checkpoint saved to {model_path}")
                 
                 # Plot and save metrics
                 self.plot_metrics(save=True, episode=e+1)
+                
+                # Print performance stats
+                elapsed = time.time() - self.start_time
+                avg_time_per_episode = elapsed / (e+1)
+                estimated_time_left = avg_time_per_episode * (self.episodes - (e+1))
+                hours, remainder = divmod(estimated_time_left, 3600)
+                minutes, seconds = divmod(remainder, 60)
+                
+                print(f"Average time per episode: {avg_time_per_episode:.2f}s")
+                print(f"Estimated time remaining: {int(hours)}h {int(minutes)}m {int(seconds)}s")
+                print(f"Timeout events: {self.timeout_count}/{e+1} episodes ({(self.timeout_count/(e+1))*100:.1f}%)")
         
         # Save the final model
         self.agent.save(self.model_name)
@@ -124,11 +165,20 @@ class SnakeTrainer:
         # Plot final metrics
         self.plot_metrics(save=True)
         
+        # Final stats
+        total_time = time.time() - self.start_time
+        hours, remainder = divmod(total_time, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        
+        print(f"Total training time: {int(hours)}h {int(minutes)}m {int(seconds)}s")
+        print(f"Average time per episode: {total_time/self.episodes:.2f}s")
+        print(f"Timeout events: {self.timeout_count}/{self.episodes} episodes ({(self.timeout_count/self.episodes)*100:.1f}%)")
+        
         return self.agent
     
     def plot_metrics(self, save=False, episode=None):
         """Plot training metrics."""
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 15))
+        fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(10, 15))
         
         # Plot scores
         ax1.plot(self.scores, label='Score', alpha=0.6)
@@ -153,6 +203,14 @@ class SnakeTrainer:
             ax3.set_ylabel('Loss')
             ax3.set_title('Average Loss per Episode')
             ax3.grid(True, linestyle='--', alpha=0.7)
+            
+        # Plot episode duration
+        if self.episode_durations:
+            ax4.plot(self.episode_durations)
+            ax4.set_xlabel('Episode')
+            ax4.set_ylabel('Duration (s)')
+            ax4.set_title('Episode Duration over Episodes')
+            ax4.grid(True, linestyle='--', alpha=0.7)
         
         plt.tight_layout()
         
@@ -165,6 +223,8 @@ class SnakeTrainer:
             np.savetxt(f"{self.log_dir}/avg_scores{suffix}.csv", np.array(self.avg_scores), delimiter=',')
             if self.losses:
                 np.savetxt(f"{self.log_dir}/losses{suffix}.csv", np.array(self.losses), delimiter=',')
+            if self.episode_durations:
+                np.savetxt(f"{self.log_dir}/durations{suffix}.csv", np.array(self.episode_durations), delimiter=',')
         else:
             plt.show()
     
