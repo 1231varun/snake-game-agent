@@ -1,0 +1,48 @@
+# Recording artifacts
+frames/
+recordings/
+*.png
+*.mp4
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Unit test / coverage reports
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Jupyter Notebooks
+notebooks/
+.ipynb_checkpoints
+
+# Project specific
+models/
+data/
+logs/
+
+# Local configurations
+.env.local
+
+# macOS specific
+.DS_Store

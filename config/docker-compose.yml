@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  snake-game:
+    build: .
+    volumes:
+      - ./:/app
+      - ./models:/app/models
+      - ./data:/app/data
+    environment:
+      - DISPLAY=${DISPLAY:-:1}
+    # Override CMD for different modes
+    command: bash -c "echo 'Starting snake game...'; if ! timeout 2 xdpyinfo >/dev/null 2>&1; then echo 'Using virtual framebuffer'; Xvfb :1 -screen 0 1280x720x24 -ac & sleep 1; fi; python src/main_web.py --mode=human"
+    # For training mode
+    # command: bash -c "echo 'Starting snake game in training mode...'; if ! timeout 2 xdpyinfo >/dev/null 2>&1; then echo 'Using virtual framebuffer'; Xvfb :1 -screen 0 1280x720x24 -ac & sleep 1; fi; python src/main_train.py --episodes=1000"
+    # For agent mode
+    # command: bash -c "echo 'Starting snake game with agent...'; if ! timeout 2 xdpyinfo >/dev/null 2>&1; then echo 'Using virtual framebuffer'; Xvfb :1 -screen 0 1280x720x24 -ac & sleep 1; fi; python src/main_web.py --mode=agent --model=models/snake_dqn.h5"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "ps aux | grep -v grep | grep -q 'python\\|Xvfb'"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # Service for visualizing the game if running on a headless server
+  display:
+    image: jare/x11-bridge
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - $HOME/.Xauthority:/root/.Xauthority
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    environment:
+      - MODE=tcp
+      - DISPLAY=:1
+    # Only needed for remote visualization
+    # Uncomment if needed
+    # network_mode: host 
