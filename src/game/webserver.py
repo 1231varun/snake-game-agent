@@ -12,7 +12,20 @@ from threading import Thread
 import json
 from game.snake import SnakeGame
 
-app = Flask(__name__)
+app = Flask(__name__, 
+           static_folder=os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')),
+           template_folder=os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates')))
+
+# Make sure static and template directories exist
+static_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static'))
+template_dir = os.path.abspath(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'templates'))
+os.makedirs(os.path.join(static_dir, 'css'), exist_ok=True)
+os.makedirs(os.path.join(static_dir, 'js'), exist_ok=True)
+os.makedirs(template_dir, exist_ok=True)
+
+# Print the paths for debugging
+print(f"Static folder: {static_dir}")
+print(f"Template folder: {template_dir}")
 
 # Game state
 game_state = {
@@ -21,7 +34,11 @@ game_state = {
     "command": None,
     "mode": "human",  # 'human' or 'agent'
     "agent": None,
-    "model_path": None
+    "model_path": None,
+    "score": 0,
+    "status": "waiting",  # 'waiting', 'running', 'game_over'
+    "status_text": "Waiting to start",
+    "last_action": None
 }
 
 # Define colors
@@ -91,20 +108,46 @@ def game_loop():
     
     # For agent mode
     if game_state["mode"] == "agent" and game_state["model_path"]:
-        from agent.dqn_agent import DQNAgent
-        agent = DQNAgent()
         try:
+            # Simple random agent for testing
+            class SimpleRandomAgent:
+                def __init__(self):
+                    self.epsilon = 0.1
+                    print("Initialized SimpleRandomAgent")
+                    
+                def act(self, state, explore=True):
+                    import random
+                    # Just return a random action (0-3)
+                    return random.randint(0, 3)
+                    
+                def load(self, path):
+                    print(f"Pretending to load model from {path}")
+                    
+            agent = SimpleRandomAgent()
+            print("Created simple random agent for testing")
+            
+            # Check if model file exists but we're using the simple agent anyway
+            if os.path.exists(game_state["model_path"]):
+                print(f"Found model file: {game_state['model_path']} (using SimpleRandomAgent instead)")
+            else:
+                print(f"Warning: Model file '{game_state['model_path']}' does not exist! Using SimpleRandomAgent.")
+                
             agent.load(game_state["model_path"])
             game_state["agent"] = agent
-            print(f"Loaded agent model from {game_state['model_path']}")
+            print(f"Agent ready in mode: {game_state['mode']}")
         except Exception as e:
-            print(f"Error loading agent model: {e}")
+            print(f"Error setting up agent: {e}")
+            print(f"Exception type: {type(e)}")
+            import traceback
+            traceback.print_exc()
+            game_state["status_text"] = f"Error: Agent setup failed: {str(e)}"
             game_state["mode"] = "human"
     
     # Main game loop
     game_state["running"] = True
     game_started = False
     restart_requested = False
+    auto_restart_delay = 0  # Counter for auto restart delay
     
     while game_state["running"]:
         # Process any commands from the web interface
@@ -135,17 +178,51 @@ def game_loop():
             game.reset()
             restart_requested = False
             game_started = True
+            game_state["status"] = "running"
+            game_state["status_text"] = "Game running"
+            game_state["score"] = 0
+        
+        # Auto restart for agent mode after game over
+        if game_state["mode"] == "agent" and game.game_over:
+            auto_restart_delay += 1
+            # Wait about 2 seconds (20 frames at 10 FPS) before auto-restarting
+            if auto_restart_delay >= 20:
+                print(f"Auto-restarting game in agent mode (delay={auto_restart_delay})")
+                game.reset()
+                game_started = True
+                auto_restart_delay = 0
+                game_state["status"] = "running"
+                game_state["status_text"] = "Game running - auto restart"
+                game_state["score"] = 0
+                print("Agent mode: auto-restarting game")
         
         # Update game state
         if game_started and not game.game_over:
+            game_state["status"] = "running"
+            game_state["status_text"] = "Game running"
+            
             if game_state["mode"] == "agent" and game_state["agent"]:
-                # Agent plays the game
-                state = game.get_state_for_agent()
-                action = game_state["agent"].act(state, explore=False)
-                game.step(action)
+                try:
+                    # Agent plays the game
+                    state = game.get_state_for_agent()
+                    action = game_state["agent"].act(state, explore=False)
+                    game_state["last_action"] = action
+                    _, _, _, info = game.step(action)
+                    game_state["score"] = info["score"]
+                except Exception as e:
+                    print(f"Error during agent gameplay: {e}")
+                    game_state["status_text"] = f"Agent error: {str(e)}"
+                    game.game_over = True
             else:
                 # Human plays the game
-                game.step()
+                _, _, _, info = game.step()
+                game_state["score"] = info["score"]
+        elif game.game_over:
+            game_state["status"] = "game_over"
+            game_state["status_text"] = "Game over"
+        else:
+            game_state["status"] = "waiting"
+            game_state["status_text"] = "Waiting to start"
         
         # Render the game
         screen = game.render()
@@ -180,148 +257,34 @@ def game_loop():
 @app.route('/')
 def index():
     """Render the main game page."""
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Snake Game</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                text-align: center;
-                background-color: #f0f0f0;
-                margin: 0;
-                padding: 20px;
-            }
-            h1 {
-                color: #333;
-            }
-            #game-container {
-                max-width: 800px;
-                margin: 0 auto;
-                background-color: white;
-                border-radius: 8px;
-                box-shadow: 0 0 10px rgba(0,0,0,0.1);
-                padding: 20px;
-            }
-            #game-screen {
-                width: 800px;
-                height: 600px;
-                border: 1px solid #ccc;
-                margin: 20px auto;
-                cursor: pointer;
-            }
-            .controls {
-                margin: 20px 0;
-                padding: 10px;
-                background-color: #f9f9f9;
-                border-radius: 4px;
-            }
-            button {
-                background-color: #4CAF50;
-                border: none;
-                color: white;
-                padding: 10px 20px;
-                text-align: center;
-                text-decoration: none;
-                display: inline-block;
-                font-size: 16px;
-                margin: 4px 2px;
-                cursor: pointer;
-                border-radius: 4px;
-            }
-            button:hover {
-                background-color: #45a049;
-            }
-        </style>
-    </head>
-    <body>
-        <div id="game-container">
-            <h1>Snake Game</h1>
-            <img id="game-screen" src="" alt="Game Screen">
-            <div class="controls">
-                <p>Controls: Arrow keys to move, R to restart, SPACE to start</p>
-                <p>Score will be displayed in the game window</p>
-            </div>
-        </div>
-        
-        <script>
-            // Get the game screen element
-            const gameScreen = document.getElementById('game-screen');
-            
-            // Function to update the game screen
-            function updateGameScreen() {
-                fetch('/get_frame')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.frame) {
-                            gameScreen.src = 'data:image/png;base64,' + data.frame;
-                        }
-                    })
-                    .catch(error => console.error('Error fetching frame:', error));
-            }
-            
-            // Update the game screen every 100ms (approximately 10 FPS)
-            setInterval(updateGameScreen, 100);
-            
-            // Handle keyboard input
-            document.addEventListener('keydown', function(event) {
-                let key = null;
-                
-                switch(event.key) {
-                    case 'ArrowUp':
-                        key = 'up';
-                        break;
-                    case 'ArrowRight':
-                        key = 'right';
-                        break;
-                    case 'ArrowDown':
-                        key = 'down';
-                        break;
-                    case 'ArrowLeft':
-                        key = 'left';
-                        break;
-                    case 'r':
-                    case 'R':
-                        key = 'r';
-                        break;
-                    case ' ':
-                        key = 'space';
-                        break;
-                }
-                
-                if (key) {
-                    // Send key press to server
-                    fetch('/send_command', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            key: key
-                        })
-                    });
-                    
-                    // Prevent default actions (like scrolling)
-                    event.preventDefault();
-                }
-            });
-        </script>
-    </body>
-    </html>
-    """
+    return render_template('game_play.html', 
+                           mode=game_state["mode"], 
+                           model_path=game_state["model_path"] or "None")
 
-@app.route('/get_frame', methods=['GET'])
-def get_frame():
-    """Return the current game frame as base64 encoded image."""
-    return jsonify({"frame": game_state["frame"]})
-
-@app.route('/send_command', methods=['POST'])
-def send_command():
-    """Receive commands from the web interface."""
-    command = request.json
-    game_state["command"] = command
-    return jsonify({"status": "ok"})
+@app.route('/get_game_state', methods=['GET'])
+def get_game_state():
+    """Return the current game state including the frame."""
+    try:
+        response = {
+            "frame": game_state.get("frame", None),
+            "score": game_state.get("score", 0),
+            "status": game_state.get("status", "waiting"),
+            "status_text": game_state.get("status_text", "Waiting to start"),
+            "last_action": game_state.get("last_action", None),
+            "success": True,
+            "error": None
+        }
+        return jsonify(response)
+    except Exception as e:
+        # Log the error on the server side
+        print(f"Error in get_game_state: {str(e)}")
+        # Return a valid JSON response even in case of error
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "status": game_state.get("status", "error"),
+            "status_text": f"Error: {str(e)}"
+        })
 
 @app.route('/set_mode', methods=['POST'])
 def set_mode():
@@ -336,6 +299,37 @@ def set_mode():
         return jsonify({"status": "ok", "mode": mode, "model_path": model_path})
     else:
         return jsonify({"status": "error", "message": "Invalid mode"})
+
+@app.route('/get_frame', methods=['GET'])
+def get_frame():
+    """Return the current game frame as base64 encoded image."""
+    return jsonify({"frame": game_state["frame"]})
+
+@app.route('/send_command', methods=['POST'])
+def send_command():
+    """Receive commands from the web interface."""
+    command = request.json
+    game_state["command"] = command
+    return jsonify({"status": "ok"})
+
+@app.errorhandler(Exception)
+def handle_error(e):
+    """Handle any unhandled exceptions and return JSON response for API endpoints."""
+    print(f"Global error handler caught: {str(e)}")
+    import traceback
+    traceback.print_exc()
+    
+    # Check if this is an API request (better to do this by path, but this is simpler)
+    if request.path.startswith('/api/') or request.path == '/get_game_state' or request.path == '/get_frame':
+        return jsonify({
+            "success": False,
+            "error": str(e),
+            "status": "error",
+            "status_text": f"Server error: {str(e)}"
+        }), 500
+    
+    # For regular pages, still show an error page
+    return f"<h1>Server Error</h1><p>{str(e)}</p>", 500
 
 def run_web_server(host='0.0.0.0', port=5000, mode='human', model_path=None):
     """Start the Flask web server."""

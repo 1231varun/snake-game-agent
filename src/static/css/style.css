@@ -1,0 +1,414 @@
+/* Main Layout */
+:root {
+    --primary-color: #4CAF50;
+    --secondary-color: #ff9800;
+    --danger-color: #f44336;
+    --background-color: #f5f5f5;
+    --panel-background: #ffffff;
+    --text-color: #333333;
+    --console-bg: #1a1a1a;
+    --console-text: #00bb00;
+    --border-radius: 8px;
+    --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --transition-time: 0.3s;
+    --border-radius-sm: 4px;
+}
+
+/* Main Layout */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+header {
+    background-color: var(--panel-background);
+    padding: 15px 20px;
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    box-shadow: var(--box-shadow);
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.main-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    flex: 1;
+}
+
+/* Components */
+.panel {
+    background-color: var(--panel-background);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: var(--box-shadow);
+    margin-bottom: 20px;
+    transition: box-shadow var(--transition-time);
+}
+
+.panel:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.panel h2 {
+    margin-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    color: var(--primary-color);
+}
+
+.game-container {
+    flex: 2;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+.control-panel {
+    margin-bottom: 20px;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.status-group {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    gap: 10px;
+}
+
+.game-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.game-frame {
+    width: 100%;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background-color: #000;
+    margin-top: 10px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+#game-canvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+.console-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+/* Console */
+#console {
+    background-color: var(--console-bg);
+    color: var(--console-text);
+    border-radius: var(--border-radius);
+    height: 200px;
+    overflow-y: auto;
+    font-family: monospace;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+#console-content {
+    height: 100%;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+#console .timestamp {
+    color: #888;
+    font-size: 0.9em;
+    margin-right: 5px;
+}
+
+.log-message {
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    line-height: 1.4;
+}
+
+.log-message:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Event-specific log messages */
+.log-message.error {
+    color: #ff5252;
+}
+
+.log-message.success {
+    color: #66bb6a;
+}
+
+.log-message.warning {
+    color: #ffca28;
+}
+
+.log-message.info {
+    color: #42a5f5;
+}
+
+.stats-container {
+    flex: 1;
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+}
+
+.stats-panel .stat-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.stats-panel .stat-item:last-child {
+    border-bottom: none;
+}
+
+.stats-panel .stat-label {
+    font-weight: bold;
+}
+
+.chart-panel {
+    flex: 1;
+    min-height: 300px;
+}
+
+/* Buttons */
+button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color var(--transition-time);
+}
+
+button:hover {
+    background-color: #3e8e41;
+}
+
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+button.pause {
+    background-color: var(--secondary-color);
+}
+
+button.pause:hover {
+    background-color: #e68a00;
+}
+
+button.danger {
+    background-color: var(--danger-color);
+}
+
+button.danger:hover {
+    background-color: #d32f2f;
+}
+
+button.secondary {
+    background-color: #607d8b;
+}
+
+button.secondary:hover {
+    background-color: #455a64;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+    background-color: #e0e0e0;
+    border-radius: 4px;
+    margin: 15px 0;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 24px;
+    background-color: var(--primary-color);
+    color: white;
+    text-align: center;
+    line-height: 24px;
+    transition: width 0.5s ease-in-out;
+}
+
+/* Connection Status */
+#connection-status {
+    padding: 3px 8px;
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+}
+
+#connection-status.connecting {
+    background-color: #f0ad4e;
+    color: #fff;
+}
+
+#connection-status.connected {
+    background-color: #5cb85c;
+    color: #fff;
+}
+
+#connection-status.disconnected {
+    background-color: #d9534f;
+    color: #fff;
+}
+
+/* Speed Display */
+#speedDisplay {
+    margin-left: 10px;
+    padding: 5px 8px;
+    background-color: #f0f0f0;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+/* Game Status Indicators */
+#game-status {
+    padding: 5px 10px;
+    border-radius: 4px;
+    display: inline-block;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.waiting {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.running {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.game-over {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+/* Help Panel */
+.help-panel {
+    margin-bottom: 20px;
+}
+
+.help-content {
+    margin-top: 10px;
+    line-height: 1.6;
+}
+
+.help-content p {
+    margin-bottom: 8px;
+}
+
+.help-content strong {
+    color: var(--primary-color);
+}
+
+/* Primary Button */
+button.primary {
+    background-color: var(--primary-color);
+}
+
+button.primary:hover {
+    background-color: #3e8e41;
+}
+
+/* Make sure the game canvas maintains aspect ratio */
+.game-view img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+}
+
+/* Additional responsive styles for game play */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .panel {
+        padding: 15px;
+    }
+    
+    .controls {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .status-group {
+        margin-left: 0;
+        margin-top: 10px;
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .help-content p {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 992px) {
+    .main-content {
+        flex-direction: column;
+    }
+    
+    .game-container, .stats-container {
+        width: 100%;
+    }
+}
+
+/* Connection Indicator */
+.connection-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 0.9rem;
+} 

@@ -24,7 +24,8 @@ class SnakeTrainer:
         target_update_freq=5,
         save_freq=100,
         render_freq=0,  # 0 means no rendering during training
-        timeout_multiplier=100  # Default timeout multiplier
+        timeout_multiplier=100,  # Default timeout multiplier
+        continue_training=True  # Whether to load existing model if available
     ):
         self.model_name = model_name
         self.log_dir = log_dir
@@ -35,6 +36,7 @@ class SnakeTrainer:
         self.save_freq = save_freq
         self.render_freq = render_freq
         self.timeout_multiplier = timeout_multiplier
+        self.continue_training = continue_training
         
         # Create directories
         os.makedirs(os.path.dirname(model_name), exist_ok=True)
@@ -44,7 +46,7 @@ class SnakeTrainer:
         self.start_time = time.time()
         self.timeout_count = 0
         
-        # Initialize agent and environment
+        # Initialize game and agent
         self.game = SnakeGame(max_steps_without_food=timeout_multiplier)
         self.agent = DQNAgent(
             state_size=11,
@@ -52,6 +54,16 @@ class SnakeTrainer:
             batch_size=batch_size,
             update_target_freq=target_update_freq
         )
+        
+        # Attempt to load existing model if continuing training
+        if continue_training and os.path.exists(model_name):
+            try:
+                print(f"Loading existing model from {model_name}")
+                self.agent.load(model_name)
+                print("Model loaded successfully. Continuing training.")
+            except Exception as e:
+                print(f"Error loading model: {e}")
+                print("Starting with a fresh model.")
         
         # Training metrics
         self.scores = []

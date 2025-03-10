@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Snake Game{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head_scripts %}{% endblock %}
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>{% block header_title %}Snake Game{% endblock %}</h1>
+        </header>
+        
+        <div class="main-content">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    
+    {% block footer_scripts %}{% endblock %}
+</body>
+</html> 

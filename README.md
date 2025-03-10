@@ -11,6 +11,8 @@ This project implements a classic Snake game using Pygame and develops an AI age
 - **Classic Snake Game**: Arrow key controls, growing when eating food
 - **Web-Based Interface**: Play directly in your browser 
 - **Reinforcement Learning Agent**: Train an AI to learn the game
+- **Visual Training**: Browser-based visualization of the training process in real-time
+- **Incremental Learning**: Resume training from previously saved models
 - **Visualization Tools**: Training metrics and performance graphs
 - **Docker Support**: Cross-platform play and training (Linux, macOS, and Windows) 
 
@@ -150,12 +152,14 @@ This project includes special optimizations for Apple Silicon (M1/M2/M3) process
 3. **Fast Training Scripts**: Includes specialized scripts for both full training and rapid testing:
    - `bin/run-docker-fast-train.sh`: Optimized training with balanced parameters
    - `bin/run-docker-test-train.sh`: Super-fast testing for rapid development iterations
+   - `bin/run-docker-visual-train.sh`: Train with real-time visualization in the browser
 
 4. **Intelligent Agent Design**:
    - Targeted exploration strategy that biases toward food
    - Adaptive learning rates optimized for Apple Silicon
    - Smart food placement to improve initial learning
    - Faster epsilon decay pattern for quicker learning
+   - Incremental learning from existing models
 
 ## Usage
 
@@ -167,17 +171,55 @@ For full training on Apple Silicon:
 ./bin/run-docker-fast-train.sh
 ```
 
+For real-time visualization of training in your browser:
+
+```bash
+./bin/run-docker-visual-train.sh
+```
+
 For quick testing of changes:
 
 ```bash
 ./bin/run-docker-test-train.sh
 ```
 
-Both scripts accept the following parameters:
-- `--episodes=N`: Number of training episodes (default: 100 for fast-train, 5 for test-train)
+All scripts accept the following parameters:
+- `--episodes=N`: Number of training episodes
 - `--model=path/to/model.h5`: Path to save the model
 - `--max-steps=N`: Maximum steps per episode
 - `--timeout=N`: Timeout multiplier (higher values give more time to find food)
+- `--continue`: Continue training from an existing model (default)
+- `--fresh`: Start with a fresh model, ignoring any existing one
+
+Visual training also accepts:
+- `--port=N`: Web port for the visualization (default: 3000)
+
+### Incremental Training
+
+By default, all training scripts will continue training from an existing model if one is found. This allows you to build on previous training sessions rather than starting from scratch each time.
+
+To start with a fresh model instead:
+
+```bash
+./bin/run-docker-fast-train.sh --fresh
+```
+
+To explicitly continue from an existing model:
+
+```bash
+./bin/run-docker-fast-train.sh --continue --model=models/my_existing_model.h5
+```
+
+### Visualizing Training
+
+The visual training script provides a real-time browser interface that allows you to:
+- Watch the snake's learning progress in real-time
+- View training metrics and charts
+- Pause/resume training
+- Adjust visualization speed
+- Monitor connection status and training logs
+
+Access the visualization by opening http://localhost:3000 in your browser while the training is running.
 
 ### Web Interface
 

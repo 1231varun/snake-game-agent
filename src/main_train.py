@@ -35,6 +35,11 @@ def parse_args():
                         help='Maximum steps per episode')
     parser.add_argument('--timeout', type=int, default=default_timeout,
                         help='Timeout multiplier for steps without food')
+    parser.add_argument('--continue', dest='continue_training', action='store_true',
+                        help='Continue training from existing model if available')
+    parser.add_argument('--fresh', dest='continue_training', action='store_false',
+                        help='Start with a fresh model, ignoring any existing one')
+    parser.set_defaults(continue_training=True)
     return parser.parse_args()
 
 def main():
@@ -44,6 +49,7 @@ def main():
     print("Starting Snake Game RL Agent Training...")
     print(f"Training for {args.episodes} episodes")
     print(f"Model will be saved to {args.model}")
+    print(f"Continue from existing model: {args.continue_training}")
     
     # Print hardware information
     print(f"Running on {platform.machine()} processor")
@@ -64,7 +70,8 @@ def main():
         batch_size=args.batch_size,
         save_freq=args.save_freq,
         render_freq=args.render_freq,
-        timeout_multiplier=args.timeout
+        timeout_multiplier=args.timeout,
+        continue_training=args.continue_training
     )
     
     # Start training

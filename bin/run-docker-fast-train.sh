@@ -13,6 +13,7 @@ SAVE_FREQ=10
 BATCH_SIZE=32
 MAX_STEPS=1000   # Increased to allow more exploration per episode 
 TIMEOUT=25       # Less aggressive timeout but still prevents infinite loops
+CONTINUE=true    # Continue training from existing model by default
 
 # Process command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -45,9 +46,17 @@ while [[ $# -gt 0 ]]; do
             TIMEOUT="${1#*=}"
             shift
             ;;
+        --fresh)
+            CONTINUE=false
+            shift
+            ;;
+        --continue)
+            CONTINUE=true
+            shift
+            ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--episodes=100] [--model=models/fast_model.h5] [--render-freq=0] [--save-freq=10] [--batch-size=32] [--max-steps=1000] [--timeout=25]"
+            echo "Usage: $0 [--episodes=100] [--model=models/fast_model.h5] [--render-freq=0] [--save-freq=10] [--batch-size=32] [--max-steps=1000] [--timeout=25] [--fresh|--continue]"
             exit 1
             ;;
     esac
@@ -62,6 +71,7 @@ echo "Save Frequency: $SAVE_FREQ"
 echo "Batch Size: $BATCH_SIZE (optimized for performance)"
 echo "Max Steps: $MAX_STEPS (increased to allow exploration)"
 echo "Timeout Multiplier: $TIMEOUT (balanced to prevent infinite loops)"
+echo "Continue Training: $CONTINUE (use --fresh to start with a new model)"
 
 # Debug: Print current directory
 echo "Current directory: $(pwd)"
@@ -137,6 +147,13 @@ fi
 
 # Construct command with optimization flag
 CMD="python -O src/main_train.py --episodes $EPISODES --model $MODEL --render-freq $RENDER_FREQ --save-freq $SAVE_FREQ --batch-size $BATCH_SIZE --max-steps $MAX_STEPS --timeout $TIMEOUT"
+
+# Add continue/fresh flag to command
+if [ "$CONTINUE" = true ]; then
+    CMD="$CMD --continue"
+else
+    CMD="$CMD --fresh"
+fi
 
 # Debug: Print the full Docker command
 echo "Full docker-compose command:"

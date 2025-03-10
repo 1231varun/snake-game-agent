@@ -1,15 +1,16 @@
 #!/bin/bash
 set -e
 
-# Ultra-fast testing values for rapid iteration
-EPISODES=5
-MODEL=models/test_model.h5
-RENDER_FREQ=0
+# Default values for visual training
+EPISODES=50
+MODEL=models/visual_model.h5
+RENDER_FREQ=1  # Render every episode
 SAVE_FREQ=5
 BATCH_SIZE=32
-MAX_STEPS=100    # Shorter episodes for faster testing
-TIMEOUT=50       # Higher timeout to allow exploration during testing
-CONTINUE=true    # Continue training from existing model by default
+MAX_STEPS=250  # Balanced for visualization
+TIMEOUT=40    # Higher timeout to show learning process
+PORT=3000     # Web server port
+CONTINUE=true # Continue training from existing model by default
 
 # Process command-line arguments
 while [[ $# -gt 0 ]]; do
@@ -42,6 +43,10 @@ while [[ $# -gt 0 ]]; do
             TIMEOUT="${1#*=}"
             shift
             ;;
+        --port=*)
+            PORT="${1#*=}"
+            shift
+            ;;
         --fresh)
             CONTINUE=false
             shift
@@ -57,16 +62,49 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "Testing Snake Game RL Agent - Super Fast Mode"
+echo "Visual Training Snake Game RL Agent"
 echo "-----------------------------------------------------"
-echo "Episodes: $EPISODES (minimal for fast testing)"
+echo "Episodes: $EPISODES (balanced for visualization)"
 echo "Model: $MODEL"
-echo "Render Frequency: $RENDER_FREQ"
+echo "Render Frequency: $RENDER_FREQ (frequent updates for visualization)"
 echo "Save Frequency: $SAVE_FREQ"
 echo "Batch Size: $BATCH_SIZE (optimized for performance)"
-echo "Max Steps: $MAX_STEPS (limited for fast testing)"
-echo "Timeout Multiplier: $TIMEOUT (high to prevent timeouts during testing)"
+echo "Max Steps: $MAX_STEPS (balanced for visualization)"
+echo "Timeout Multiplier: $TIMEOUT (higher to show exploration)"
+echo "Web Port: $PORT (view at http://localhost:$PORT)"
 echo "Continue Training: $CONTINUE (use --fresh to start with a new model)"
+
+# Check port and clear if necessary
+check_and_clear_port() {
+    local port=$1
+    
+    # Check if port is in use
+    if lsof -i :$port -sTCP:LISTEN >/dev/null 2>&1; then
+        echo "Port $port is in use. Attempting to clear..."
+        
+        # Get PID of process using the port
+        local pid=$(lsof -i :$port -sTCP:LISTEN -t)
+        
+        # Kill the process
+        if [ ! -z "$pid" ]; then
+            echo "Killing process $pid using port $port"
+            kill -9 $pid 2>/dev/null || true
+            sleep 1
+        fi
+        
+        # Check if port is still in use
+        if lsof -i :$port -sTCP:LISTEN >/dev/null 2>&1; then
+            echo "ERROR: Failed to clear port $port"
+            return 1
+        else
+            echo "Port $port cleared successfully"
+        fi
+    else
+        echo "Port $port is available"
+    fi
+    
+    return 0
+}
 
 # Check if Docker is running
 check_docker_running() {
@@ -83,6 +121,9 @@ check_docker_running() {
 
 # Check Docker
 check_docker_running
+
+# Check and clear port
+check_and_clear_port $PORT
 
 # Detect Apple Silicon for optimizations
 IS_APPLE_SILICON=false
@@ -108,6 +149,7 @@ docker-compose -f "$(dirname "$0")/../config/docker-compose.yml" build snake-gam
 ENV_VARS="-e TF_CPP_MIN_LOG_LEVEL=2"
 ENV_VARS="$ENV_VARS -e TF_FORCE_GPU_ALLOW_GROWTH=true"
 ENV_VARS="$ENV_VARS -e TF_ENABLE_ONEDNN_OPTS=1"
+ENV_VARS="$ENV_VARS -e SNAKE_GAME_WEB_PORT=$PORT"
 
 # Add Apple Silicon specific optimizations
 if [[ "$IS_APPLE_SILICON" == true ]]; then
@@ -117,8 +159,8 @@ if [[ "$IS_APPLE_SILICON" == true ]]; then
     ENV_VARS="$ENV_VARS -e TF_ENABLE_AUTO_MIXED_PRECISION=1"
 fi
 
-# Build command
-CMD="python -O src/main_train.py --episodes $EPISODES --model $MODEL --render-freq $RENDER_FREQ --save-freq $SAVE_FREQ --batch-size $BATCH_SIZE --max-steps $MAX_STEPS --timeout $TIMEOUT"
+# Build command for visual training mode
+CMD="python -O src/main_visual_train.py --episodes $EPISODES --model $MODEL --render-freq $RENDER_FREQ --save-freq $SAVE_FREQ --batch-size $BATCH_SIZE --max-steps $MAX_STEPS --timeout $TIMEOUT --port $PORT"
 
 # Add continue/fresh flag to command
 if [ "$CONTINUE" = true ]; then
@@ -127,11 +169,12 @@ else
     CMD="$CMD --fresh"
 fi
 
-echo "Running test training..."
+echo "Running visual training..."
 echo "Command: $CMD"
+echo "Training visualization will be available at http://localhost:$PORT"
 
-# Run the container with mounted volumes
-docker-compose -f "$(dirname "$0")/../config/docker-compose.yml" run --rm $ENV_VARS \
+# Run the container with mounted volumes and port mapping
+docker-compose -f "$(dirname "$0")/../config/docker-compose.yml" run --rm -p $PORT:$PORT $ENV_VARS \
     -v "$ABSOLUTE_MODEL_PATH:/app/models" \
     -v "$ABSOLUTE_DATA_PATH:/app/data" \
     snake-game bash -c "$CMD" || {
@@ -140,6 +183,6 @@ docker-compose -f "$(dirname "$0")/../config/docker-compose.yml" run --rm $ENV_V
     exit 1
 }
 
-echo "Test training completed"
+echo "Visual training completed"
 echo "Model saved to: $MODEL"
 echo "Training data saved to data directory" 

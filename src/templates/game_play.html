@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+
+{% block title %}Snake Game - {{ mode|capitalize }} Mode{% endblock %}
+
+{% block header_title %}Snake Game - {{ mode|capitalize }} Mode{% endblock %}
+
+{% block content %}
+<!-- Game Visualization Column -->
+<div class="game-container">
+    <!-- Control Panel -->
+    <div class="panel control-panel">
+        <h2>Control Panel</h2>
+        <div class="controls">
+            <button id="restartBtn" class="danger">Restart Game</button>
+            <button id="startBtn" class="primary">Start Game</button>
+            
+            <div class="status-group">
+                <div id="game-status" class="waiting">Waiting to Start</div>
+                <div class="connection-indicator">
+                    <span>Connection:</span>
+                    <span id="connection-status" class="connecting">Connecting...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game View -->
+    <div class="panel game-view">
+        <h2>Snake Game - {% if mode == 'human' %}Human{% else %}Agent{% endif %} Mode</h2>
+        <div class="game-frame">
+            <img id="game-canvas" src="data:image/png;base64,{{ initial_frame|default('') }}" alt="Snake Game">
+        </div>
+    </div>
+    
+    <!-- Controls Help -->
+    <div class="panel help-panel">
+        <div class="help-header">
+            <h2>Controls</h2>
+        </div>
+        <div class="help-content">
+            {% if mode == 'human' %}
+                <p>Use the <strong>arrow keys</strong> to control the snake.</p>
+                <p><strong>↑</strong> - Move Up | <strong>→</strong> - Move Right | <strong>↓</strong> - Move Down | <strong>←</strong> - Move Left</p>
+                <p>Press <strong>R</strong> to restart the game after game over.</p>
+                <p>Press <strong>SPACE</strong> to start the game.</p>
+            {% else %}
+                <p>Watch the agent play Snake using the model: <strong>{{ model_path }}</strong></p>
+                <p>The agent is using a DQN (Deep Q-Network) to make decisions.</p>
+                <p>Press <strong>R</strong> to restart the agent after game over.</p>
+                <p>Press <strong>SPACE</strong> to start the agent.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Column -->
+<div class="stats-container">
+    <!-- Game Stats -->
+    <div class="panel stats-panel">
+        <h2>Game Statistics</h2>
+        
+        <div class="stat-item">
+            <span class="stat-label">Score:</span>
+            <span id="score">0</span>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-label">High Score:</span>
+            <span id="highScore">0</span>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-label">Games Played:</span>
+            <span id="gamesPlayed">0</span>
+        </div>
+        
+        {% if mode == 'agent' %}
+        <div class="stat-item">
+            <span class="stat-label">Avg. Score:</span>
+            <span id="avgScore">0.00</span>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-label">Action:</span>
+            <span id="lastAction">None</span>
+        </div>
+        {% endif %}
+        
+        <div class="stat-item">
+            <span class="stat-label">Status:</span>
+            <span id="gameStatus">Waiting to start</span>
+        </div>
+    </div>
+    
+    {% if mode == 'agent' %}
+    <!-- Agent Performance Chart -->
+    <div class="panel chart-panel">
+        <h2>Performance</h2>
+        <canvas id="performanceChart"></canvas>
+    </div>
+    {% endif %}
+    
+    <!-- Console for feedback -->
+    <div class="panel console-panel">
+        <div class="console-header">
+            <h2>Game Console</h2>
+            <button id="clearConsole" class="secondary">Clear</button>
+        </div>
+        <div id="console">
+            <div id="console-content"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block footer_scripts %}
+<script>
+// Game state
+let gameStarted = false;
+let gameOver = false;
+let highScore = 0;
+let gamesPlayed = 0;
+let scores = [];
+let currentGameCounted = false;  // Flag to track if current game has been counted
+
+// Function to log to console
+function logToConsole(message) {
+    const console = document.getElementById('console-content');
+    if (console) {
+        const timestamp = new Date().toLocaleTimeString();
+        console.innerHTML += `<div><span class="timestamp">${timestamp}</span> ${message}</div>`;
+        console.scrollTop = console.scrollHeight;
+    }
+}
+
+// Helper function to safely update an element
+function safeUpdateElement(id, updateFn) {
+    const element = document.getElementById(id);
+    if (element) {
+        updateFn(element);
+    } else {
+        console.warn(`Element with ID '${id}' not found`);
+    }
+}
+
+// Initialize when the document is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    {% if mode == 'agent' %}
+    // Initialize the chart for agent mode
+    initChart();
+    
+    // Auto-start the game for agent mode after a short delay
+    setTimeout(() => {
+        sendCommand('space');
+        logToConsole('Agent mode: automatically starting game');
+    }, 2000);
+    {% endif %}
+    
+    // Add event listeners to buttons
+    setupEventListeners();
+    
+    // Start frame updates
+    startUpdates();
+    
+    // Initial log
+    logToConsole('Game initialized. {% if mode == "human" %}Press SPACE or click Start to begin.{% else %}Game will start automatically...{% endif %}');
+});
+
+{% if mode == 'agent' %}
+// Performance chart for agent mode
+let performanceChart;
+
+function initChart() {
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    performanceChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Score',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Score'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Game'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Update the chart with new game data
+function updateChart(score) {
+    performanceChart.data.labels.push(gamesPlayed);
+    performanceChart.data.datasets[0].data.push(score);
+    performanceChart.update();
+}
+{% endif %}
+
+// Set up event listeners for buttons and keyboard
+function setupEventListeners() {
+    // Start Button
+    safeUpdateElement('startBtn', element => {
+        element.addEventListener('click', function() {
+            sendCommand('space');
+            logToConsole('Game started');
+        });
+    });
+    
+    // Restart Button
+    safeUpdateElement('restartBtn', element => {
+        element.addEventListener('click', function() {
+            sendCommand('r');
+            logToConsole('Game restarted');
+        });
+    });
+    
+    // Clear Console Button
+    safeUpdateElement('clearConsole', element => {
+        element.addEventListener('click', function() {
+            const consoleContent = document.getElementById('console-content');
+            if (consoleContent) {
+                consoleContent.innerHTML = '';
+            }
+            logToConsole('Console cleared');
+        });
+    });
+    
+    // Keyboard controls
+    document.addEventListener('keydown', function(event) {
+        let key = null;
+        
+        switch(event.key) {
+            case 'ArrowUp':
+                key = 'up';
+                break;
+            case 'ArrowRight':
+                key = 'right';
+                break;
+            case 'ArrowDown':
+                key = 'down';
+                break;
+            case 'ArrowLeft':
+                key = 'left';
+                break;
+            case 'r':
+            case 'R':
+                key = 'r';
+                logToConsole('Game restarted');
+                break;
+            case ' ':
+                key = 'space';
+                if (!gameStarted) {
+                    logToConsole('Game started');
+                    gameStarted = true;
+                }
+                break;
+        }
+        
+        if (key) {
+            sendCommand(key);
+            event.preventDefault();
+        }
+    });
+}
+
+// Send a command to the server
+function sendCommand(key) {
+    fetch('/send_command', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            key: key
+        })
+    });
+}
+
+// Start frame updates
+function startUpdates() {
+    // Add a short delay before starting updates to ensure everything is loaded
+    setTimeout(() => {
+        // Update the game state every 100ms (10 FPS)
+        setInterval(updateGameState, 100);
+        logToConsole('Started game state updates');
+    }, 1000);
+}
+
+// Update the game state
+function updateGameState() {
+    fetch('/get_game_state')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success === false) {
+                throw new Error(data.error || 'Unknown error');
+            }
+            
+            // Update connection status safely
+            safeUpdateElement('connection-status', element => {
+                element.className = 'connected';
+                element.textContent = 'Connected';
+            });
+            
+            // Update game screen safely
+            if (data.frame) {
+                safeUpdateElement('game-canvas', element => {
+                    element.src = 'data:image/png;base64,' + data.frame;
+                });
+            }
+            
+            // Update game status safely
+            if (data.status !== undefined) {
+                safeUpdateElement('game-status', statusElement => {
+                    if (data.status === 'running') {
+                        statusElement.className = 'running';
+                        statusElement.textContent = 'Game Running';
+                        gameStarted = true;
+                        gameOver = false;
+                        currentGameCounted = false;  // Reset the counted flag when game is running
+                    } else if (data.status === 'game_over') {
+                        statusElement.className = 'game-over';
+                        statusElement.textContent = 'Game Over';
+                        
+                        // Only update counters if this game over hasn't been counted yet
+                        if (!currentGameCounted && gameStarted) {
+                            gameOver = true;
+                            currentGameCounted = true;  // Mark this game as counted
+                            
+                            // Update games played and high score
+                            gamesPlayed++;
+                            if (data.score > highScore) {
+                                highScore = data.score;
+                                safeUpdateElement('highScore', el => el.textContent = highScore);
+                                logToConsole(`New high score: ${highScore}!`);
+                            }
+                            safeUpdateElement('gamesPlayed', el => el.textContent = gamesPlayed);
+                            
+                            {% if mode == 'agent' %}
+                            // Update chart for agent mode
+                            scores.push(data.score);
+                            updateChart(data.score);
+                            
+                            // Update average score
+                            const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+                            safeUpdateElement('avgScore', el => el.textContent = avgScore.toFixed(2));
+                            {% endif %}
+                            
+                            logToConsole(`Game over! Final score: ${data.score}. Games played: ${gamesPlayed}`);
+                        }
+                    } else if (data.status === 'waiting') {
+                        statusElement.className = 'waiting';
+                        statusElement.textContent = 'Waiting to Start';
+                        gameStarted = false;
+                    }
+                });
+            }
+            
+            // Update score safely
+            if (data.score !== undefined) {
+                safeUpdateElement('score', el => el.textContent = data.score);
+            }
+            
+            // Update game status text safely
+            if (data.status_text !== undefined) {
+                safeUpdateElement('gameStatus', el => el.textContent = data.status_text);
+            }
+            
+            {% if mode == 'agent' %}
+            // Update last action for agent mode safely
+            if (data.last_action !== undefined) {
+                safeUpdateElement('lastAction', el => {
+                    const actions = ['Up', 'Right', 'Down', 'Left'];
+                    el.textContent = data.last_action >= 0 && data.last_action < actions.length 
+                        ? actions[data.last_action] 
+                        : 'Unknown';
+                });
+            }
+            {% endif %}
+        })
+        .catch(error => {
+            console.error('Error updating game state:', error);
+            logToConsole(`Error updating game state: ${error.message}`);
+            
+            // Update connection status to show disconnected safely
+            safeUpdateElement('connection-status', el => {
+                el.className = 'disconnected';
+                el.textContent = 'Connection Error';
+            });
+            
+            // Don't keep logging the same error repeatedly
+            if (!window.lastLoggedError || window.lastLoggedError !== error.message) {
+                window.lastLoggedError = error.message;
+                console.error('Detailed error:', error);
+            }
+        });
+}
+</script>
+{% endblock %} 

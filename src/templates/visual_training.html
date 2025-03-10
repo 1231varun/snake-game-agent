@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Snake Game RL Training Dashboard{% endblock %}
+
+{% block header_title %}Snake Game RL Training Dashboard{% endblock %}
+
+{% block head_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Game Visualization Column -->
+<div class="game-container">
+    <!-- Control Panel -->
+    <div class="panel control-panel">
+        <h2>Control Panel</h2>
+        <div class="controls">
+            <button id="pauseBtn" class="pause">Pause</button>
+            <button id="speedDown">Slower</button>
+            <button id="speedUp">Faster</button>
+            <span id="speedDisplay">Speed: 1x</span>
+            
+            <div class="status-group">
+                <div id="connection-status" class="connecting">Connecting...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Game View -->
+    <div class="panel game-view">
+        <h2>Game View</h2>
+        <img id="game-canvas" src="" alt="Snake Game Visualization">
+    </div>
+    
+    <!-- Console -->
+    <div class="panel console-panel">
+        <div class="console-header">
+            <h2>Console</h2>
+            <button id="clearConsole" class="secondary">Clear</button>
+        </div>
+        <div id="console">
+            <div id="console-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics and Charts Column -->
+<div class="stats-container">
+    <!-- Training Progress -->
+    <div class="panel stats-panel">
+        <h2>Training Progress</h2>
+        
+        <div class="progress-bar-container">
+            <div id="episodeProgress" class="progress-bar" style="width: 0%">0%</div>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-label">Episode:</span>
+            <span id="episode">0/0</span>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-label">Score:</span>
+            <span id="score">0</span>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-label">Average Score:</span>
+            <span id="avgScore">0.00</span>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-label">Epsilon:</span>
+            <span id="epsilon">1.000</span>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-label">Timeouts:</span>
+            <span id="timeouts">0</span>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-label">Step:</span>
+            <span id="step">0</span>
+        </div>
+        
+        <div class="stat-item">
+            <span class="stat-label">Last Update:</span>
+            <span id="lastUpdate">Never</span>
+        </div>
+    </div>
+    
+    <!-- Training Metrics Chart -->
+    <div class="panel chart-panel">
+        <h2>Training Metrics</h2>
+        <canvas id="scoreChart"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block footer_scripts %}
+<script src="{{ url_for('static', filename='js/training-dashboard.js') }}"></script>
+{% endblock %}
+    

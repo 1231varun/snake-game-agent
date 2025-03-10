@@ -10,7 +10,7 @@ DEFAULT_PORT=3000
 
 # Parse command line arguments
 MODE="human"
-MODEL=""
+MODEL="models/snake_dqn.h5"
 PORT="$DEFAULT_PORT"
 
 # Process arguments
@@ -42,6 +42,18 @@ echo "Mode: $MODE"
 echo "Port: $PORT"
 if [ "$MODE" == "agent" ]; then
   echo "Model: $MODEL"
+fi
+
+# Verify the model file exists if in agent mode
+if [ "$MODE" == "agent" ]; then
+    if [ ! -f "$MODEL" ]; then
+        echo "Error: Model file '$MODEL' does not exist!"
+        echo "Please specify a valid model file with --model=PATH"
+        exit 1
+    else
+        echo "Model file found: $MODEL"
+        echo "Full path: $(realpath $MODEL)"
+    fi
 fi
 
 # Check if Docker daemon is running
@@ -95,6 +107,10 @@ if ! docker-compose -f $(dirname $0)/../config/docker-compose.yml build snake-ga
   exit 1
 fi
 
+# Create directories if they don't exist
+mkdir -p models
+mkdir -p data
+
 # Construct command
 CMD="python src/main_web.py --port $PORT --mode $MODE"
 if [ "$MODE" == "agent" ] && [ ! -z "$MODEL" ]; then
@@ -104,7 +120,11 @@ fi
 # Run the container with web server
 echo "Running Docker container with web interface..."
 echo "Command: $CMD"
-if ! docker-compose -f $(dirname $0)/../config/docker-compose.yml run --rm -p $PORT:$PORT snake-game bash -c "$CMD"; then
+if ! docker-compose -f $(dirname $0)/../config/docker-compose.yml run --rm \
+    -p $PORT:$PORT \
+    -v "$(pwd)/models:/app/models" \
+    -v "$(pwd)/data:/app/data" \
+    snake-game bash -c "$CMD"; then
   echo "Error running container. There was a problem with port $PORT."
   echo "You can try manually specifying a different port with --port=<number>"
   exit 1
